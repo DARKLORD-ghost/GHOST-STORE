@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ghost Store</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body { font-family: Arial; background:#0f0f1a; color:white; text-align:center; }
+.container { margin-top:40px; }
+input, select { padding:10px; margin:5px; width:220px; border-radius:8px; border:none; }
+button { padding:10px 20px; margin:10px; border:none; border-radius:8px; cursor:pointer; background:#6c5ce7; color:white; }
+.card { background:#1e1e2f; padding:20px; margin:10px auto; width:300px; border-radius:12px; }
+.hidden { display:none; }
+</style>
+</head>
+<body>
+
+<h1>👻 GHOST STORE</h1>
+
+<div id="auth" class="container">
+<h2>Login / Register</h2>
+<input type="email" id="email" placeholder="Email"><br>
+<input type="password" id="password" placeholder="Password"><br>
+<button onclick="register()">Register</button>
+<button onclick="login()">Login</button>
+</div>
+
+<div id="dashboard" class="hidden">
+<h2>Welcome 🎮</h2>
+
+<div class="card">
+<select id="game">
+<option>PUBG Mobile</option>
+<option>Free Fire</option>
+<option>EA FC Mobile</option>
+</select><br>
+<input type="text" id="playerId" placeholder="Player ID"><br>
+<input type="number" id="amount" placeholder="Amount"><br>
+<button onclick="createOrder()">Charge Now</button>
+</div>
+
+<div class="card">
+<h3>Your Orders</h3>
+<div id="orders"></div>
+</div>
+
+<button onclick="logout()">Logout</button>
+</div>
+
+<script>
+const supabase = window.supabase.createClient(
+  "YOUR_PROJECT_URL",
+  "YOUR_ANON_KEY"
+);
+
+async function register(){
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const { error } = await supabase.auth.signUp({ email, password });
+  if(error) alert(error.message);
+  else alert("Registered successfully 🎉");
+}
+
+async function login(){
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if(error) alert(error.message);
+  else {
+    document.getElementById("auth").classList.add("hidden");
+    document.getElementById("dashboard").classList.remove("hidden");
+    loadOrders();
+  }
+}
+
+async function createOrder(){
+  const user = (await supabase.auth.getUser()).data.user;
+  const game = document.getElementById("game").value;
+  const playerId = document.getElementById("playerId").value;
+  const amount = document.getElementById("amount").value;
+
+  await supabase.from("orders").insert([
+    { username: user.email, game, player_id: playerId, amount, status: "Pending" }
+  ]);
+
+  alert("Order Sent 🚀");
+  loadOrders();
+}
+
+async function loadOrders(){
+  const user = (await supabase.auth.getUser()).data.user;
+  const { data } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("username", user.email);
+
+  const container = document.getElementById("orders");
+  container.innerHTML = "";
+
+  data.forEach(order=>{
+    container.innerHTML += `
+      <p>${order.game} - ${order.amount} - ${order.status}</p>
+    `;
+  });
+}
+
+async function logout(){
+  await supabase.auth.signOut();
+  location.reload();
+}
+</script>
+
+</body>
+  </html>
